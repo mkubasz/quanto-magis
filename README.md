@@ -82,7 +82,7 @@
 
 ### Built With
 
-* [![Go][Go]][Go-url]
+* [![Go Lang][Go]][Go-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -170,6 +170,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 ## Contact
 
 Mateusz Kubaszek - [@MateuszKubaszek](https://twitter.com/MateuszKubaszek) - mkubasz@gmail.com
+
 Project Link: [https://github.com/mkubasz/quanto-magis](https://github.com/mkubasz/quanto-magis)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

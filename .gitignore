@@ -59,6 +59,7 @@ fabric.properties
 ### VisualStudioCode ###
 .vscode/
 
+.DS_Store
 # Local History for Visual Studio Code
 .history/
 
