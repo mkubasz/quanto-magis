@@ -1,5 +1,10 @@
 package main
 
+import (
+	"runtime"
+	"sync"
+)
+
 type RDD[T any] struct {
 	data []T
 	size int
@@ -16,20 +21,49 @@ func (s *QuantoSession) Parallelize(data []interface{}) *RDD[interface{}] {
 	return RDDCreateFromArray(data)
 }
 
-func (r *RDD[T]) Map(f func(T) T) *RDD[T] {
-	var newData []T
-	for _, d := range r.data {
-		newData = append(newData, f(d))
+func (r *RDD[T]) AsyncTransform(fn func([]T, []T) []T) []T {
+	var wg sync.WaitGroup
+	numGoroutines := runtime.NumCPU()
+	chunkSize := r.size / numGoroutines
+	processedData := make([]T, 0, r.size)
+	lock := sync.Mutex{}
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			start := i * chunkSize
+			end := start + chunkSize
+			if i == numGoroutines-1 {
+				end = r.size
+			}
+			newData := r.data[start:end]
+			lock.Lock()
+			processedData = fn(processedData, newData)
+			lock.Unlock()
+		}(i)
 	}
-	return RDDCreateFromArray(newData)
+	wg.Wait()
+	return processedData
+}
+
+func (r *RDD[T]) Map(f func(T) T) *RDD[T] {
+	mappedData := r.AsyncTransform(func(data []T, newData []T) []T {
+		for _, d := range newData {
+			data = append(data, f(d))
+		}
+		return data
+	})
+	return RDDCreateFromArray(mappedData)
 }
 
 func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
-	var newData []T
-	for _, d := range r.data {
-		if f(d) {
-			newData = append(newData, d)
+	filteredData := r.AsyncTransform(func(data []T, newData []T) []T {
+		for _, d := range newData {
+			if f(d) {
+				data = append(data, d)
+			}
 		}
-	}
-	return RDDCreateFromArray(newData)
+		return data
+	})
+	return RDDCreateFromArray(filteredData)
 }
