@@ -73,7 +73,8 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+This project is a simple example of how to use Go to create a Spark-like engine for data processing. The main goal is to create a simple and fast engine for data processing using Kubernetes. The project is in the early stage of development and is not ready for production use.
+
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -97,9 +98,7 @@ To get a local copy up and running follow these simple example steps.
 ### Prerequisites
 
 This is an example of how to list things you need to use the software and how to install them.
-* go
-  ```sh
-  ```
+* GO website => https://go.dev/doc/install
 
 ### Installation
 
@@ -155,6 +154,11 @@ Don't forget to give the project a star! Thanks again!
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+<!-- NOTES -->
+## Notes
+My journey learning tech.
+
+[GO Notes](docs/NOTES.md)
 
 <!-- LICENSE -->
 ## License
