@@ -72,26 +72,30 @@ func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
 func (r *RDD[T]) FlatArray() *RDD[T] {
 	var flattenData []T
 	var wg sync.WaitGroup
-	var mu sync.Mutex
+	resultChan := make(chan T)
 	for _, d := range r.data {
 		wg.Add(1)
 		go func(d T) {
 			defer wg.Done()
-			t := reflect.TypeOf(d)
-			mu.Lock()
-			if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+			if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 				v := reflect.ValueOf(d)
-				insideSlice := v.Interface().([]T)
-				for _, inside := range insideSlice {
-					flattenData = append(flattenData, reflect.ValueOf(inside).Interface().(T))
+				for _, inside := range v.Interface().([]T) {
+					resultChan <- inside
 				}
 			} else {
-				flattenData = append(flattenData, d)
+				resultChan <- d
 			}
-			mu.Unlock()
 		}(d)
 	}
-	wg.Wait()
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for result := range resultChan {
+		flattenData = append(flattenData, result)
+	}
 	return RDDCreateFromArray(flattenData)
 }
 
@@ -102,25 +106,30 @@ func (r *RDD[T]) Collect() []T {
 func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
 	var flattenData []T
 	var wg sync.WaitGroup
-	var mu sync.Mutex
+	resultChan := make(chan T)
 	for _, d := range r.data {
 		wg.Add(1)
 		go func(d T) {
 			defer wg.Done()
-			t := reflect.TypeOf(d)
-			mu.Lock()
-			if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+			if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
 				v := reflect.ValueOf(d)
-				insideSlice := v.Interface().([]T)
-				for _, inside := range insideSlice {
-					flattenData = append(flattenData, f(inside))
+				for _, inside := range v.Interface().([]T) {
+					resultChan <- f(inside)
 				}
 			} else {
-				flattenData = append(flattenData, f(d))
+				resultChan <- f(d)
 			}
-			mu.Unlock()
 		}(d)
 	}
-	wg.Wait()
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for result := range resultChan {
+		flattenData = append(flattenData, result)
+	}
+
 	return RDDCreateFromArray(flattenData)
 }
