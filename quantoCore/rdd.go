@@ -72,22 +72,28 @@ func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
 func (r *RDD[T]) FlatArray() *RDD[T] {
 	var flattenData []T
 	var wg sync.WaitGroup
+	numWorkers := runtime.NumCPU()
 	resultChan := make(chan T)
-	for _, d := range r.data {
+
+	// Fan-out
+	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
-		go func(d T) {
+		go func(startIndex, endIndex int) {
 			defer wg.Done()
-			if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-				v := reflect.ValueOf(d)
-				for _, inside := range v.Interface().([]T) {
-					resultChan <- inside
+			for _, d := range r.data[startIndex:endIndex] {
+				if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+					v := reflect.ValueOf(d)
+					for _, inside := range v.Interface().([]T) {
+						resultChan <- inside
+					}
+				} else {
+					resultChan <- d
 				}
-			} else {
-				resultChan <- d
 			}
-		}(d)
+		}(i*len(r.data)/numWorkers, (i+1)*len(r.data)/numWorkers)
 	}
 
+	// Fan-in
 	go func() {
 		wg.Wait()
 		close(resultChan)
@@ -96,6 +102,7 @@ func (r *RDD[T]) FlatArray() *RDD[T] {
 	for result := range resultChan {
 		flattenData = append(flattenData, result)
 	}
+
 	return RDDCreateFromArray(flattenData)
 }
 
@@ -104,32 +111,50 @@ func (r *RDD[T]) Collect() []T {
 }
 
 func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
-	var flattenData []T
+	numWorkers := runtime.NumCPU()
+	jobs := make(chan T, len(r.data))
+	results := make(chan []T, numWorkers)
+
+	// Start worker goroutines
 	var wg sync.WaitGroup
-	resultChan := make(chan T)
-	for _, d := range r.data {
-		wg.Add(1)
-		go func(d T) {
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
 			defer wg.Done()
-			if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-				v := reflect.ValueOf(d)
-				for _, inside := range v.Interface().([]T) {
-					resultChan <- f(inside)
+			var flattenData []T
+			for d := range jobs {
+				t := reflect.TypeOf(d)
+				if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+					v := reflect.ValueOf(d)
+					insideSlice := v.Interface().([]T)
+					for _, inside := range insideSlice {
+						flattenData = append(flattenData, f(inside))
+					}
+				} else {
+					flattenData = append(flattenData, f(d))
 				}
-			} else {
-				resultChan <- f(d)
 			}
-		}(d)
+			results <- flattenData
+		}()
 	}
 
+	// Send jobs to workers
 	go func() {
-		wg.Wait()
-		close(resultChan)
+		for _, d := range r.data {
+			jobs <- d
+		}
+		close(jobs)
 	}()
 
-	for result := range resultChan {
-		flattenData = append(flattenData, result)
-	}
+	// Collect results from workers
+	var flattenData []T
+	go func() {
+		for result := range results {
+			flattenData = append(flattenData, result...)
+		}
+		close(results)
+	}()
 
+	wg.Wait()
 	return RDDCreateFromArray(flattenData)
 }
