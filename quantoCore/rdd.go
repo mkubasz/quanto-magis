@@ -70,7 +70,6 @@ func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
 }
 
 func (r *RDD[T]) FlatArray() *RDD[T] {
-	var flattenData []T
 	var wg sync.WaitGroup
 	numWorkers := runtime.NumCPU()
 	resultChan := make(chan T)
@@ -99,6 +98,7 @@ func (r *RDD[T]) FlatArray() *RDD[T] {
 		close(resultChan)
 	}()
 
+	var flattenData []T
 	for result := range resultChan {
 		flattenData = append(flattenData, result)
 	}
