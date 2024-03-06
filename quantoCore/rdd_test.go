@@ -60,3 +60,33 @@ func TestRDDShouldFilterCLetter(t *testing.T) {
 		t.Errorf("result size is not 4")
 	}
 }
+
+func TestRDDShouldFlatArray(t *testing.T) {
+	session := NewQuantoSession()
+	data := []interface{}{[]interface{}{1, 2, 3, 4, 5}, []interface{}{6, 7, 8, 9, 10}}
+
+	rdd := session.Parallelize(data)
+	result := rdd.FlatArray()
+	if result == nil {
+		t.Errorf("result is nil")
+	}
+	if result.size != 10 {
+		t.Errorf("result size is not 10")
+	}
+}
+
+func TestRDDShouldFlatMap(t *testing.T) {
+	session := NewQuantoSession()
+	data := []interface{}{[]interface{}{"A", "B", "C"}, []interface{}{"D", "E"}}
+
+	rdd := session.Parallelize(data)
+	result := rdd.FlatMap(lowerCase)
+	if result == nil {
+		t.Errorf("result is nil")
+	}
+	for _, d := range result.data {
+		if d != "a" && d != "b" && d != "c" && d != "d" && d != "e" {
+			t.Errorf("result data is not a, b, c, d, e")
+		}
+	}
+}

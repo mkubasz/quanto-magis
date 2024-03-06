@@ -1,6 +1,7 @@
 package main
 
 import (
+	"reflect"
 	"runtime"
 	"sync"
 )
@@ -66,4 +67,60 @@ func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
 		return data
 	})
 	return RDDCreateFromArray(filteredData)
+}
+
+func (r *RDD[T]) FlatArray() *RDD[T] {
+	var flattenData []T
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for _, d := range r.data {
+		wg.Add(1)
+		go func(d T) {
+			defer wg.Done()
+			t := reflect.TypeOf(d)
+			mu.Lock()
+			if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+				v := reflect.ValueOf(d)
+				insideSlice := v.Interface().([]T)
+				for _, inside := range insideSlice {
+					flattenData = append(flattenData, reflect.ValueOf(inside).Interface().(T))
+				}
+			} else {
+				flattenData = append(flattenData, d)
+			}
+			mu.Unlock()
+		}(d)
+	}
+	wg.Wait()
+	return RDDCreateFromArray(flattenData)
+}
+
+func (r *RDD[T]) Collect() []T {
+	return r.data
+}
+
+func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
+	var flattenData []T
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for _, d := range r.data {
+		wg.Add(1)
+		go func(d T) {
+			defer wg.Done()
+			t := reflect.TypeOf(d)
+			mu.Lock()
+			if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+				v := reflect.ValueOf(d)
+				insideSlice := v.Interface().([]T)
+				for _, inside := range insideSlice {
+					flattenData = append(flattenData, f(inside))
+				}
+			} else {
+				flattenData = append(flattenData, f(d))
+			}
+			mu.Unlock()
+		}(d)
+	}
+	wg.Wait()
+	return RDDCreateFromArray(flattenData)
 }
