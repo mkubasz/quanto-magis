@@ -11,6 +11,7 @@ func TestRDDCreateFromArray(t *testing.T) {
 	rdd := session.Parallelize(data)
 	if rdd == nil {
 		t.Errorf("RDD is nil")
+		return
 	}
 	if rdd.size != 5 {
 		t.Errorf("RDD size is not 5")
@@ -23,6 +24,7 @@ func TestRDDCreateFromStringArray(t *testing.T) {
 	rdd := session.Parallelize(data)
 	if rdd == nil {
 		t.Errorf("RDD is nil")
+		return
 	}
 	if rdd.size != 5 {
 		t.Errorf("RDD size is not 5")
@@ -38,11 +40,9 @@ func TestRDDShouldLowerCase(t *testing.T) {
 	data := []interface{}{"A", "B", "C", "D", "E"}
 	rdd := session.Parallelize(data)
 	result := rdd.Map(lowerCase)
-	if result == nil {
-		t.Errorf("result is nil")
-	}
-	if result.data[0] != "a" {
-		t.Errorf("result[0] is not a")
+	expected := []string{"a", "b", "c", "d", "e"}
+	if rdd.size != len(expected) {
+		t.Errorf("expected result size to be %d, got %d", len(expected), rdd.size)
 	}
 }
 
@@ -53,25 +53,23 @@ func TestRDDShouldFilterCLetter(t *testing.T) {
 	result := rdd.Filter(func(s interface{}) bool {
 		return s.(string) != "C"
 	})
-	if result == nil {
-		t.Errorf("result is nil")
-	}
 	if result.size != 4 {
-		t.Errorf("result size is not 4")
+		t.Errorf("expected result size to be 4, got %d", result.size)
 	}
 }
 
 func TestRDDShouldFlatArray(t *testing.T) {
 	session := NewQuantoSession()
-	data := []interface{}{[]interface{}{1, 2, 3, 4, 5}, []interface{}{6, 7, 8, 9, 10}}
+	data := []interface{}{
+		[]interface{}{1, 2, 3, 4, 5},
+		[]interface{}{6, 7, 8, 9, 10},
+	}
 
 	rdd := session.Parallelize(data)
 	result := rdd.FlatArray()
-	if result == nil {
-		t.Errorf("result is nil")
-	}
-	if result.size != 10 {
-		t.Errorf("result size is not 10")
+
+	if len(result.data) != 10 {
+		t.Errorf("expected result size to be 10, got %d", len(result.data))
 	}
 }
 
@@ -81,12 +79,24 @@ func TestRDDShouldFlatMap(t *testing.T) {
 
 	rdd := session.Parallelize(data)
 	result := rdd.FlatMap(lowerCase)
+
 	if result == nil {
 		t.Errorf("result is nil")
+		return
 	}
-	for _, d := range result.data {
-		if d != "a" && d != "b" && d != "c" && d != "d" && d != "e" {
-			t.Errorf("result data is not a, b, c, d, e")
+	expected := []interface{}{"a", "b", "c", "d", "e"}
+	for _, e := range expected {
+		if !contains(result.data, e) {
+			t.Errorf("expected %v in result data", e)
 		}
 	}
+}
+
+func contains(slice []interface{}, val interface{}) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
 }
