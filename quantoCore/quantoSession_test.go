@@ -7,8 +7,8 @@ import (
 func TestQuantoSessionBasicSettings(t *testing.T) {
 	session := NewQuantoSession().
 		SetAppName("Quanto Session").
-		master("local").
-		getOrCreate()
+		SetMode("local").
+		GetOrCreate()
 
 	if session.AppName != "Quanto Session" {
 		t.Errorf("AppName is not 'Quanto Session'")

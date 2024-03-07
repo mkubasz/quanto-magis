@@ -6,7 +6,7 @@ import (
 )
 
 func TestRDDCreateFromArray(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{1, 2, 3, 4, 5}
 	rdd := session.Parallelize(data)
 	if rdd == nil {
@@ -19,7 +19,7 @@ func TestRDDCreateFromArray(t *testing.T) {
 }
 
 func TestRDDCreateFromStringArray(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{"A", "B", "C", "D", "E"}
 	rdd := session.Parallelize(data)
 	if rdd == nil {
@@ -36,10 +36,9 @@ func lowerCase(s interface{}) interface{} {
 }
 
 func TestRDDShouldLowerCase(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{"A", "B", "C", "D", "E"}
 	rdd := session.Parallelize(data)
-	result := rdd.Map(lowerCase)
 	expected := []string{"a", "b", "c", "d", "e"}
 	if rdd.size != len(expected) {
 		t.Errorf("expected result size to be %d, got %d", len(expected), rdd.size)
@@ -47,7 +46,7 @@ func TestRDDShouldLowerCase(t *testing.T) {
 }
 
 func TestRDDShouldFilterCLetter(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{"A", "B", "C", "D", "E"}
 	rdd := session.Parallelize(data)
 	result := rdd.Filter(func(s interface{}) bool {
@@ -59,7 +58,7 @@ func TestRDDShouldFilterCLetter(t *testing.T) {
 }
 
 func TestRDDShouldFlatArray(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{
 		[]interface{}{1, 2, 3, 4, 5},
 		[]interface{}{6, 7, 8, 9, 10},
@@ -74,7 +73,7 @@ func TestRDDShouldFlatArray(t *testing.T) {
 }
 
 func TestRDDShouldFlatMap(t *testing.T) {
-	session := NewQuantoSession()
+	session := NewQuantoSession().GetOrCreate()
 	data := []interface{}{[]interface{}{"A", "B", "C"}, []interface{}{"D", "E"}}
 
 	rdd := session.Parallelize(data)

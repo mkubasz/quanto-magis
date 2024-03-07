@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 type Mode string
@@ -30,19 +31,13 @@ func (s *QuantoSession) SetAppName(appName string) *QuantoSession {
 	return s
 }
 
-func (s *QuantoSession) master(mode string) *QuantoSession {
-	switch mode {
-	case "local":
-		fmt.Println("Running in local mode")
-		s.Mode = Local
-	case "cluster":
-		fmt.Println("Running in cluster mode")
-		s.Mode = Cluster
-	}
+func (s *QuantoSession) SetMode(mode string) *QuantoSession {
+	s.Mode = map[string]Mode{"local": Local, "cluster": Cluster}[mode]
+	fmt.Printf("Running in %s mode\n", mode)
 	return s
 }
 
-func (s *QuantoSession) getOrCreate() *QuantoSession {
+func (s *QuantoSession) GetOrCreate() *QuantoSession {
 	return s
 }
 
