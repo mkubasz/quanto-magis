@@ -19,3 +19,18 @@ func (s *RDD[T]) ToDF() *DataFrame {
 		series: []Series[interface{}]{series},
 	}
 }
+
+func NewDataFrame(data []interface{}) *DataFrame {
+	var series []Series[interface{}]
+	size := 0
+	for _, row := range data {
+		var serie Series[interface{}]
+		size += len(row.([]interface{}))
+		serie.data = append(serie.data, row.([]interface{})...)
+		series = append(series, serie)
+	}
+	return &DataFrame{
+		size:   size,
+		series: series,
+	}
+}
