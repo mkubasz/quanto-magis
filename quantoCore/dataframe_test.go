@@ -21,6 +21,7 @@ func TestShouldConvertRDDToDataFrame(t *testing.T) {
 func TestShouldCreateBasicDataFrameWithTwoColumns(t *testing.T) {
 	columnOne := []interface{}{"A", "B", "C", "D", "E"}
 	columnTwo := []interface{}{1, 2, 3, 4, 5}
+
 	df := NewDataFrame([]interface{}{columnOne, columnTwo})
 	if df == nil {
 		t.Error("Failed to create DataFrame")

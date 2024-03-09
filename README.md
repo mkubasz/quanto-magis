@@ -106,7 +106,6 @@ This is an example of how to list things you need to use the software and how to
    ```sh
    git clone https://github.com/mkubasz/quanto-magis.git
    ```
-   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -117,19 +116,26 @@ This is an example of how to list things you need to use the software and how to
 
 Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+```go
+	session := NewQuantoSession().GetOrCreate()
+	data := []interface{}{[]interface{}{"A", "B", "C"}, []interface{}{"D", "E"}}
+
+	rdd := session.Parallelize(data)
+	result := rdd.FlatMap(lowerCase)
+    // result = [a, b, c, d, e]
+```
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
-<!-- ROADMAP -->
-## Roadmap
+<!-- Features -->
+## Features
 
-- [ ] Implement basic functionality (hello world)
-- [ ] Implement RDD
-- [ ] Feature 3
-    - [ ] Nested Feature
+- Quanto Session - a session for data processing for a specific core
+- RDD - Resilient Distributed Dataset
+- DataFrame - a distributed collection of data organized into named columns
 
 See the [open issues](https://github.com/mkubasz/quanto-magis/issues) for a full list of proposed features (and known issues).
 
@@ -153,6 +159,13 @@ Don't forget to give the project a star! Thanks again!
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+
+<!-- Architecture -->
+## Architecture
+
+[Link to architecture](https://link.excalidraw.com/l/6OWSHwUWoad/2foryRzJ0RH)
+
+![Architecture](./docs/Quanto%20Magis%20lib.png "Title")
 
 <!-- NOTES -->
 ## Notes
@@ -179,13 +192,6 @@ Project Link: [https://github.com/mkubasz/quanto-magis](https://github.com/mkuba
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
