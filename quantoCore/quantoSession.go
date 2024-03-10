@@ -18,11 +18,13 @@ type QuantoSession struct {
 	Id      string
 	AppName string
 	Mode    Mode
+	Read    Read
 }
 
 func NewQuantoSession() *QuantoSession {
 	return &QuantoSession{
-		Id: uuid.NewString(),
+		Id:   uuid.NewString(),
+		Read: Read{},
 	}
 }
 

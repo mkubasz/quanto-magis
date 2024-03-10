@@ -6,6 +6,7 @@ type Series[T any] struct {
 
 type DataFrame struct {
 	series []Series[interface{}]
+	columns []string
 	size   int
 }
 
@@ -20,7 +21,7 @@ func (s *RDD[T]) ToDF() *DataFrame {
 	}
 }
 
-func NewDataFrame(data []interface{}) *DataFrame {
+func NewDataFrame(data []interface{}, columns []string) *DataFrame {
 	var series []Series[interface{}]
 	size := 0
 	for _, row := range data {
