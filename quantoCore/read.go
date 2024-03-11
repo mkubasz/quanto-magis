@@ -2,43 +2,63 @@ package main
 
 import (
 	"encoding/csv"
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 )
 
 type Read struct{}
 
-func (r *Read) Csv(fileName string) *DataFrame {
-	file, err := os.Open(fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+func (r *Read) Csv(fileName string) (*DataFrame, error) {
+    file, err := os.Open(fileName)
+    if err != nil {
+        return nil, fmt.Errorf("failed to open file: %w", err)
+    }
+    defer file.Close()
 
-	reader := csv.NewReader(file)
-	records, err := reader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-	columnNames := records[0]
-	size := len(columnNames)
-	columns := make([]Series[interface{}], size)
+    reader := csv.NewReader(file)
+    records, err := reader.ReadAll()
+    if err != nil {
+        return nil, fmt.Errorf("failed to read CSV records: %w", err)
+    }
 
-	for _, record := range records[1:] {
-		for idx, value := range record {
-			f, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				columns[idx].data = append(columns[idx].data, value)
-			} else {
-				columns[idx].data = append(columns[idx].data, f)
-			}
-		}
-	}
+    if len(records) < 2 {
+        return nil, fmt.Errorf("invalid CSV format: missing data rows")
+    }
 
-	return &DataFrame{
-		series: columns,
-		columns:  columnNames,
-		size:     len(records) - 1,
-	}
+    columnNames := records[0]
+    dataRecords := records[1:]
+
+    columns, err := createColumns(columnNames, dataRecords)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create columns: %w", err)
+    }
+
+    return &DataFrame{
+        series:  columns,
+        columns: columnNames,
+        size:    len(dataRecords),
+    }, nil
+}
+
+func createColumns(columnNames []string, records [][]string) ([]Series[interface{}], error) {
+    numColumns := len(columnNames)
+    columns := make([]Series[interface{}], numColumns)
+
+    for _, record := range records {
+        if len(record) != numColumns {
+            return nil, fmt.Errorf("invalid CSV format: inconsistent number of columns")
+        }
+
+        for idx, value := range record {
+            f, err := strconv.ParseFloat(value, 64)
+            if err != nil {
+                columns[idx].data = append(columns[idx].data, value)
+            } else {
+                columns[idx].data = append(columns[idx].data, f)
+            }
+        }
+    }
+
+    return columns, nil
 }

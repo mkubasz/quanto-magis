@@ -9,7 +9,10 @@ func TestShouldReadCSVFile(t *testing.T) {
 		SetAppName("Quanto Session").
 		SetMode("local").
 		GetOrCreate()
-	df := session.Read.Csv("data/iris.csv")
+	df, err := session.Read.Csv("data/iris.csv")
+	if err != nil {
+		t.Errorf("failed to read csv file: %v", err)
+	}
 	expected := []string{"sepal.length", "sepal.width", "petal.length", "petal.width", "variety"}
 	for _, e := range expected {
 		if !containsStr(df.columns, e) {
