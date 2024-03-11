@@ -22,7 +22,7 @@ func TestShouldCreateBasicDataFrameWithTwoColumns(t *testing.T) {
 	columnOne := []interface{}{"A", "B", "C", "D", "E"}
 	columnTwo := []interface{}{1, 2, 3, 4, 5}
 
-	df := NewDataFrame([]interface{}{columnOne, columnTwo})
+	df := NewDataFrame([]interface{}{columnOne, columnTwo}, []string{"col1", "col2"})
 	if df == nil {
 		t.Error("Failed to create DataFrame")
 		return
