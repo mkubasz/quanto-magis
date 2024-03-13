@@ -54,3 +54,15 @@ func TestShouldDistinctSelectedColumn(t *testing.T) {
 		t.Error("Failed creating column")
 	}
 }
+
+func TestShouldDistinctSelectedColumnAndCount(t *testing.T) {
+	columnOne := []interface{}{"A", "B", "A", "D", "E"}
+	columnTwo := []interface{}{1, 2, 3, 4, 5}
+	df := NewDataFrame([]interface{}{columnOne, columnTwo}, []string{"col1", "col2"})
+	col1, _ := df.Select("col1")
+	distincted, err := col1.Distinct("A")
+	size := distincted.Count()
+	if size != 4 && err != nil {
+		t.Error("Failed creating column")
+	}
+}

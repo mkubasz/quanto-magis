@@ -68,3 +68,7 @@ func (s Series[T]) Distinct(key string) (Series[interface{}], error) {
 	}
 	return Series[interface{}]{data: distinctValues}, nil
 }
+
+func (s Series[T]) Count() int {
+	return len(s.data)
+}
