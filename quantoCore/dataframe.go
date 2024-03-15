@@ -42,7 +42,7 @@ func NewDataFrame(data []interface{}, columns []string) *DataFrame {
 func (df *DataFrame) Select(columnName string) (Series[interface{}], error) {
 	idx, err := df.getColumnIndex(columnName)
 	if err != nil {
-		return Series[interface{}]{}, err
+		return Series[interface{}]{}, errors.New("column not found")
 	}
 	return df.series[idx], nil
 }

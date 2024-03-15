@@ -27,8 +27,8 @@ func TestShouldCreateBasicDataFrameWithTwoColumns(t *testing.T) {
 		t.Error("Failed to create DataFrame")
 		return
 	}
-	if df.size != 10 {
-		t.Error("Failed to create DataFrame")
+	if expectedSize := 10; df.size != expectedSize {
+		t.Errorf("Expected DataFrame size %d; got %d", expectedSize, df.size)
 	}
 }
 
