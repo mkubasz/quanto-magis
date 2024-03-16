@@ -138,7 +138,6 @@ func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
 		}()
 	}
 
-	// Send jobs to workers
 	go func() {
 		for _, d := range r.data {
 			jobs <- d
@@ -146,7 +145,6 @@ func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
 		close(jobs)
 	}()
 
-	// Collect results from workers
 	var flattenData []T
 	go func() {
 		for result := range results {
