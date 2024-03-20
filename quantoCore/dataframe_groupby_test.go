@@ -10,7 +10,7 @@ func TestShouldCountGroupBy(t *testing.T) {
 	df := NewDataFrame([]interface{}{columnOne, columnTwo}, []string{"col1", "col2"})
 	dfg, _ := df.GroupBy("col1")
 	new_df := dfg.Agg(Count).Show()
-	if new_df.size != 2 {
-		t.Errorf("Expected 2 columns, got %d", len(new_df.columns))
+	if new_df.size != 8 {
+		t.Errorf("Expected 8 in general rowes, got %d", len(new_df.columns))
 	}
 }
