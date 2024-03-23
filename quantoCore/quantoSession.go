@@ -15,10 +15,10 @@ const (
 )
 
 type QuantoSession struct {
+	Read    Read
 	Id      string
 	AppName string
 	Mode    Mode
-	Read    Read
 }
 
 func NewQuantoSession() *QuantoSession {

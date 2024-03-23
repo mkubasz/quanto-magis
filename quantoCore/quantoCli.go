@@ -8,12 +8,31 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+type QuantoCLI struct {
+	quantosession QuantoSession
+}
+
+func NewQuantoCLI() *QuantoCLI {
+	return &QuantoCLI{
+		quantosession: *NewQuantoSession(),
+	}
+}
+
 func main() {
+	NewQuantoCLI()
 	app := &cli.App{
 		Name:  "Quanto",
 		Usage: "quanto manager for computing data",
-		Action: func(*cli.Context) error {
-			fmt.Println("boom! I say!")
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "mode",
+				Value: "local",
+				Usage: "mode to run quanto in",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			fmt.Println("Quanto is running")
+			fmt.Println("Mode:", ctx.String("mode"))
 			return nil
 		},
 	}
