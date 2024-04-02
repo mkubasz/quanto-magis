@@ -25,6 +25,11 @@ func main() {
 		Usage: "quanto manager for computing data",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
+				Name:  "name",
+				Value: "Default",
+				Usage: "name of the app to run quanto in",
+			},
+			&cli.StringFlag{
 				Name:  "mode",
 				Value: "local",
 				Usage: "mode to run quanto in",
