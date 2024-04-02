@@ -29,6 +29,12 @@ func main() {
 				Value: "Default",
 				Usage: "name of the app to run quanto in",
 			},
+			Action: func(ctx *cli.Context) error {
+				fmt.Println("Quanto is running")
+				fmt.Println("Name:", ctx.String("name"))
+				fmt.Println("Mode:", ctx.String("mode"))
+				return nil
+			},
 			&cli.StringFlag{
 				Name:  "mode",
 				Value: "local",
