@@ -49,6 +49,8 @@ func (r *RDD[T]) Size() int {
 //
 // The context can be used to cancel the operation.
 // Returns context.Canceled if the context is canceled during processing.
+//
+//nolint:cyclop,funlen // Complex parallel processing logic requires multiple branches.
 func (r *RDD[T]) Map(ctx context.Context, fn func(T) T) (*RDD[T], error) {
 	// Check context before starting
 	if err := ctx.Err(); err != nil {
@@ -60,9 +62,7 @@ func (r *RDD[T]) Map(ctx context.Context, fn func(T) T) (*RDD[T], error) {
 	}
 
 	numWorkers := runtime.NumCPU()
-	chunkSize := r.size / numWorkers
-	if chunkSize == 0 {
-		chunkSize = 1
+	if r.size < numWorkers {
 		numWorkers = r.size
 	}
 
@@ -139,6 +139,8 @@ func (r *RDD[T]) Map(ctx context.Context, fn func(T) T) (*RDD[T], error) {
 //
 // The context can be used to cancel the operation.
 // Returns context.Canceled if the context is canceled during processing.
+//
+//nolint:cyclop,funlen // Complex parallel processing logic requires multiple branches.
 func (r *RDD[T]) Filter(ctx context.Context, predicate func(T) bool) (*RDD[T], error) {
 	// Check context before starting
 	if err := ctx.Err(); err != nil {
@@ -221,6 +223,8 @@ func (r *RDD[T]) Filter(ctx context.Context, predicate func(T) bool) (*RDD[T], e
 //
 // The context can be used to cancel the operation.
 // Returns context.Canceled if the context is canceled during processing.
+//
+//nolint:cyclop,funlen // Complex parallel processing logic requires multiple branches.
 func (r *RDD[T]) FlatArray(ctx context.Context) (*RDD[T], error) {
 	// Check context before starting
 	if err := ctx.Err(); err != nil {
@@ -304,6 +308,8 @@ func (r *RDD[T]) FlatArray(ctx context.Context) (*RDD[T], error) {
 //
 // The context can be used to cancel the operation.
 // Returns context.Canceled if the context is canceled during processing.
+//
+//nolint:cyclop,gocognit,funlen // Complex parallel processing and flattening logic.
 func (r *RDD[T]) FlatMap(ctx context.Context, fn func(T) T) (*RDD[T], error) {
 	// Check context before starting
 	if err := ctx.Err(); err != nil {

@@ -1,3 +1,4 @@
+// Package quanto provides a unified API for data processing with DataFrames and RDDs.
 package quanto
 
 import (
@@ -7,13 +8,13 @@ import (
 	"mkubasz/quanto/internal/session"
 )
 
-// Session wraps the internal QuantoSession with additional functionality
+// Session wraps the internal QuantoSession with additional functionality.
 type Session struct {
 	*session.QuantoSession
 	Reader *io.Reader
 }
 
-// NewSession creates a new Quanto session with all capabilities
+// NewSession creates a new Quanto session with all capabilities.
 func NewSession() *Session {
 	return &Session{
 		QuantoSession: session.New(),
@@ -21,40 +22,48 @@ func NewSession() *Session {
 	}
 }
 
-// Parallelize creates an RDD from a slice of data
+// Parallelize creates an RDD from a slice of data.
 func (s *Session) Parallelize(data []interface{}) *rdd.RDD[interface{}] {
 	return rdd.New(data)
 }
 
-// ReadCSV reads a CSV file and returns a DataFrame
+// ReadCSV reads a CSV file and returns a DataFrame.
 func (s *Session) ReadCSV(fileName string) (*dataframe.DataFrame, error) {
 	return s.Reader.ReadCSV(fileName)
 }
 
 // Re-export commonly used types for convenience
-type (
-	DataFrame        = dataframe.DataFrame
-	DataFrameGroupBy = dataframe.DataFrameGroupBy
-	Mode             = session.Mode
-)
 
-// Re-export commonly used functions
-var (
-	NewDataFrame = dataframe.New
-	Count        = dataframe.Count
-)
+// DataFrame is an alias for dataframe.DataFrame providing column-oriented data structure.
+type DataFrame = dataframe.DataFrame
 
-// NewDataFrameFromRDD creates a DataFrame from an RDD
+// GroupBy is an alias for dataframe.GroupBy for grouped aggregation operations.
+type GroupBy = dataframe.GroupBy
+
+// Mode is an alias for session.Mode representing execution modes.
+type Mode = session.Mode
+
+// NewDataFrame creates a new DataFrame from columns and column names.
+func NewDataFrame(columns []interface{}, columnNames []string) (*dataframe.DataFrame, error) {
+	return dataframe.New(columns, columnNames)
+}
+
+// Count is a dataframe aggregation function that counts elements.
+func Count(values []interface{}) int {
+	return dataframe.Count(values)
+}
+
+// NewDataFrameFromRDD creates a DataFrame from an RDD.
 func NewDataFrameFromRDD[T any](r *rdd.RDD[T]) *dataframe.DataFrame {
 	return dataframe.NewFromRDD(r)
 }
 
-// NewRDD creates a new RDD from a slice of data
+// NewRDD creates a new RDD from a slice of data.
 func NewRDD[T any](data []T) *rdd.RDD[T] {
 	return rdd.New(data)
 }
 
-// Re-export mode constants
+// Re-export mode constants.
 const (
 	Local   = session.Local
 	Cluster = session.Cluster

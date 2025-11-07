@@ -1,24 +1,28 @@
-package dataframe
+package dataframe_test
 
 import (
 	"context"
 	"errors"
 	"testing"
+
+	"mkubasz/quanto/internal/dataframe"
 )
 
-// TestGroupBy verifies grouping operations
+// TestGroupBy verifies grouping operations.
+//
+//nolint:funlen // Test functions require comprehensive test cases.
 func TestGroupBy(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func() *DataFrame
+		setup      func() *dataframe.DataFrame
 		columnName string
 		wantErr    error
 		wantGroups int
 	}{
 		{
 			name: "group by existing column",
-			setup: func() *DataFrame {
-				df, _ := New(
+			setup: func() *dataframe.DataFrame {
+				df, _ := dataframe.New(
 					[]interface{}{
 						[]interface{}{"A", "B", "A", "C", "B"},
 						[]interface{}{1, 2, 3, 4, 5},
@@ -29,12 +33,12 @@ func TestGroupBy(t *testing.T) {
 			},
 			columnName: "col1",
 			wantErr:    nil,
-			wantGroups: 3, // A, B, C
+			wantGroups: 3, // A, B, C.
 		},
 		{
 			name: "group by non-existing column",
-			setup: func() *DataFrame {
-				df, _ := New(
+			setup: func() *dataframe.DataFrame {
+				df, _ := dataframe.New(
 					[]interface{}{
 						[]interface{}{1, 2, 3},
 					},
@@ -43,7 +47,7 @@ func TestGroupBy(t *testing.T) {
 				return df
 			},
 			columnName: "col2",
-			wantErr:    ErrColumnNotFound,
+			wantErr:    dataframe.ErrColumnNotFound,
 		},
 	}
 
@@ -69,18 +73,27 @@ func TestGroupBy(t *testing.T) {
 				return
 			}
 
-			if len(grouped.groups) != tt.wantGroups {
-				t.Errorf("groups = %d, want %d", len(grouped.groups), tt.wantGroups)
+			// Verify the number of groups by materializing with Count aggregation
+			result, err := grouped.Agg(dataframe.Count).Show(ctx)
+			if err != nil {
+				t.Errorf("unexpected error calling Show: %v", err)
+				return
+			}
+
+			// Each group contributes one row per aggregation
+			// So with 1 aggregation (Count), we should have wantGroups rows
+			if result.Size()/result.NumColumns() != tt.wantGroups {
+				t.Errorf("groups = %d, want %d", result.Size()/result.NumColumns(), tt.wantGroups)
 			}
 		})
 	}
 }
 
-// TestGroupByAgg verifies aggregation operations
+// TestGroupByAgg verifies aggregation operations.
 func TestGroupByAgg(t *testing.T) {
 	ctx := context.Background()
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{
 			[]interface{}{"A", "B", "A", "C", "B", "A"},
 			[]interface{}{1, 2, 3, 4, 5, 6},
@@ -93,8 +106,8 @@ func TestGroupByAgg(t *testing.T) {
 		t.Fatalf("GroupBy failed: %v", err)
 	}
 
-	// Test Count aggregation
-	result, err := grouped.Agg(Count).Show(ctx)
+	// Test Count aggregation.
+	result, err := grouped.Agg(dataframe.Count).Show(ctx)
 	if err != nil {
 		t.Fatalf("Show failed: %v", err)
 	}
@@ -104,11 +117,11 @@ func TestGroupByAgg(t *testing.T) {
 	}
 }
 
-// TestGroupByMultipleAgg verifies multiple aggregations
+// TestGroupByMultipleAgg verifies multiple aggregations.
 func TestGroupByMultipleAgg(t *testing.T) {
 	ctx := context.Background()
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{
 			[]interface{}{"A", "B", "A"},
 			[]interface{}{1, 2, 3},
@@ -121,8 +134,8 @@ func TestGroupByMultipleAgg(t *testing.T) {
 		t.Fatalf("GroupBy failed: %v", err)
 	}
 
-	// Add multiple aggregations
-	result, err := grouped.Agg(Count).Agg(Sum).Show(ctx)
+	// Add multiple aggregations.
+	result, err := grouped.Agg(dataframe.Count).Agg(dataframe.Sum).Show(ctx)
 	if err != nil {
 		t.Fatalf("Show failed: %v", err)
 	}
@@ -132,11 +145,11 @@ func TestGroupByMultipleAgg(t *testing.T) {
 	}
 }
 
-// TestGroupByShowWithoutAgg verifies error when Show is called without aggregations
+// TestGroupByShowWithoutAgg verifies error when Show is called without aggregations.
 func TestGroupByShowWithoutAgg(t *testing.T) {
 	ctx := context.Background()
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{
 			[]interface{}{"A", "B", "A"},
 		},
@@ -148,28 +161,28 @@ func TestGroupByShowWithoutAgg(t *testing.T) {
 		t.Fatalf("GroupBy failed: %v", err)
 	}
 
-	// Try to Show without adding aggregations
+	// Try to Show without adding aggregations.
 	_, err = grouped.Show(ctx)
 	if err == nil {
 		t.Error("expected error when Show is called without aggregations")
 	}
-	if !errors.Is(err, ErrInvalidData) {
-		t.Errorf("expected ErrInvalidData, got %v", err)
+	if !errors.Is(err, dataframe.ErrInvalidData) {
+		t.Errorf("expected dataframe.ErrInvalidData, got %v", err)
 	}
 }
 
-// TestGroupByCancellation verifies context cancellation
+// TestGroupByCancellation verifies context cancellation.
 func TestGroupByCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel() // Cancel immediately.
 
-	// Create large dataset
+	// Create large dataset.
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i % 100
 	}
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{data},
 		[]string{"col1"},
 	)
@@ -178,22 +191,22 @@ func TestGroupByCancellation(t *testing.T) {
 	if err == nil {
 		t.Error("expected error due to context cancellation")
 	}
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got: %v", err)
 	}
 }
 
-// TestShowCancellation verifies context cancellation during Show
+// TestShowCancellation verifies context cancellation during Show.
 func TestShowCancellation(t *testing.T) {
 	ctx := context.Background()
 
-	// Create large dataset
+	// Create large dataset.
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i % 100
 	}
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{data},
 		[]string{"col1"},
 	)
@@ -203,20 +216,20 @@ func TestShowCancellation(t *testing.T) {
 		t.Fatalf("GroupBy failed: %v", err)
 	}
 
-	// Cancel context before Show
+	// Cancel context before Show.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err = grouped.Agg(Count).Show(ctx)
+	_, err = grouped.Agg(dataframe.Count).Show(ctx)
 	if err == nil {
 		t.Error("expected error due to context cancellation")
 	}
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got: %v", err)
 	}
 }
 
-// TestAggregationFunctions verifies built-in aggregation functions
+// TestAggregationFunctions verifies built-in aggregation functions.
 func TestAggregationFunctions(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -226,31 +239,31 @@ func TestAggregationFunctions(t *testing.T) {
 	}{
 		{
 			name:     "count function",
-			fn:       Count,
+			fn:       dataframe.Count,
 			input:    []interface{}{1, 2, 3, 4, 5},
 			expected: 5,
 		},
 		{
 			name:     "count empty",
-			fn:       Count,
+			fn:       dataframe.Count,
 			input:    []interface{}{},
 			expected: 0,
 		},
 		{
 			name:     "sum function",
-			fn:       Sum,
+			fn:       dataframe.Sum,
 			input:    []interface{}{1, 2, 3, 4, 5},
 			expected: 15,
 		},
 		{
 			name:     "sum with non-integers",
-			fn:       Sum,
+			fn:       dataframe.Sum,
 			input:    []interface{}{1, "string", 2, 3},
 			expected: 6, // Non-integers ignored
 		},
 		{
 			name:     "sum empty",
-			fn:       Sum,
+			fn:       dataframe.Sum,
 			input:    []interface{}{},
 			expected: 0,
 		},
@@ -266,17 +279,17 @@ func TestAggregationFunctions(t *testing.T) {
 	}
 }
 
-// BenchmarkGroupBy benchmarks grouping operation
+// BenchmarkGroupBy benchmarks grouping operation.
 func BenchmarkGroupBy(b *testing.B) {
 	ctx := context.Background()
 
-	// Create dataset with 1000 rows and 10 unique groups
+	// Create dataset with 1000 rows and 10 unique groups.
 	data := make([]interface{}, 1000)
 	for i := range data {
 		data[i] = i % 10
 	}
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{data},
 		[]string{"category"},
 	)
@@ -289,17 +302,17 @@ func BenchmarkGroupBy(b *testing.B) {
 	}
 }
 
-// BenchmarkGroupByAgg benchmarks grouping with aggregation
+// BenchmarkGroupByAgg benchmarks grouping with aggregation.
 func BenchmarkGroupByAgg(b *testing.B) {
 	ctx := context.Background()
 
-	// Create dataset with 1000 rows and 10 unique groups
+	// Create dataset with 1000 rows and 10 unique groups.
 	data := make([]interface{}, 1000)
 	for i := range data {
 		data[i] = i % 10
 	}
 
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{data},
 		[]string{"category"},
 	)
@@ -309,6 +322,6 @@ func BenchmarkGroupByAgg(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		grouped, _ := df.GroupBy(ctx, "category")
-		_, _ = grouped.Agg(Count).Show(ctx)
+		_, _ = grouped.Agg(dataframe.Count).Show(ctx)
 	}
 }

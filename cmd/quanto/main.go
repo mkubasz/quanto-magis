@@ -1,7 +1,8 @@
+// Package main provides the entry point for the Quanto data processing application.
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"mkubasz/quanto/internal/cli"
 	"mkubasz/quanto/pkg/quanto"
@@ -17,13 +18,15 @@ func main() {
 		[]string{"col1", "col2"},
 	)
 	if err != nil {
-		fmt.Printf("Error creating DataFrame: %v\n", err)
+		log.Printf("Error creating DataFrame: %v\n", err)
 		return
 	}
-	fmt.Println(df.HasColumn("col1"))
+	log.Println(df.HasColumn("col1"))
 
 	// Initialize and run CLI
 	quantoCli := cli.New()
-	quantoCli.Run()
-	fmt.Println(quantoCli.Session)
+	if err := quantoCli.Run(); err != nil {
+		log.Printf("Error running CLI: %v\n", err)
+	}
+	log.Println(quantoCli.Session)
 }

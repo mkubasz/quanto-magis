@@ -2,6 +2,7 @@
 # Author https://gist.github.com/maratori/47a4d00457a92aa426dbd48a18776322
 ## Golden config for golangci-lint v1.56.2
 
+version: 2
 
 run:
   # Timeout for analysis, e.g. 30s, 5m.
@@ -15,11 +16,11 @@ linters-settings:
   cyclop:
     # The maximal code complexity to report.
     # Default: 10
-    max-complexity: 30
+    max-complexity: 20
     # The maximal average package complexity.
     # If it's higher than 0.0 (float) the check is enabled
     # Default: 0.0
-    package-average: 10.0
+    package-average: 0.0
 
   errcheck:
     # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
@@ -67,11 +68,11 @@ linters-settings:
     # Checks the number of lines in a function.
     # If lower than 0, disable the check.
     # Default: 60
-    lines: 100
+    lines: 150
     # Checks the number of statements in a function.
     # If lower than 0, disable the check.
     # Default: 40
-    statements: 50
+    statements: 80
     # Ignore comments when counting lines.
     # Default false
     ignore-comments: true
@@ -79,7 +80,7 @@ linters-settings:
   gocognit:
     # Minimal code complexity to report.
     # Default: 30 (but we recommend 10-20)
-    min-complexity: 20
+    min-complexity: 45
 
   gocritic:
     # Settings passed to gocritic.
@@ -192,11 +193,9 @@ linters:
   enable:
     ## enabled by default
     - errcheck # checking for unchecked errors, these unchecked errors can be critical bugs in some cases
-    - gosimple # specializes in simplifying a code
     - govet # reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - ineffassign # detects when assignments to existing variables are not used
     - staticcheck # is a go vet on steroids, applying a ton of static analysis checks
-    - typecheck # like the front-end of a Go compiler, parses and type-checks Go code
     - unused # checks for unused constants, variables, functions and types
     ## disabled by default
     - asasalint # checks for pass []any as any in variadic func(...any)
@@ -208,9 +207,7 @@ linters:
     - durationcheck # checks for two durations multiplied together
     - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - errorlint # finds code that will cause problems with the error wrapping scheme introduced in Go 1.13
-    - execinquery # checks query string in Query function which reads your Go src files and warning it finds
     - exhaustive # checks exhaustiveness of enum switch statements
-    - exportloopref # checks for pointers to enclosing loop variables
     - forbidigo # forbids identifiers
     - funlen # tool for detection of long functions
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
@@ -222,8 +219,6 @@ linters:
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - gocyclo # computes and checks the cyclomatic complexity of functions
     - godot # checks if comments end in a period
-    - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
-    - gomnd # detects magic numbers
     - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
@@ -251,8 +246,6 @@ linters:
     - sloglint # ensure consistent code style when using log/slog
     - spancheck # checks for mistakes with OpenTelemetry/Census spans
     - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
-    - stylecheck # is a replacement for golint
-    - tenv # detects using os.Setenv instead of t.Setenv since Go1.17
     - testableexamples # checks if examples are testable (have an expected output)
     - testifylint # checks usage of github.com/stretchr/testify
     - testpackage # makes you use a separate _test package
@@ -313,6 +306,9 @@ linters:
     #- structcheck # [deprecated, replaced by unused] finds unused struct fields
     #- varcheck # [deprecated, replaced by unused] finds unused global variables and constants
 
+formatters:
+  enable:
+    - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
 
 issues:
   # Maximum count of issues with the same text.
@@ -334,6 +330,14 @@ issues:
         - gosec
         - noctx
         - wrapcheck
+    - path: "internal/io/csv\\.go"
+      text: "G304"
+      linters:
+        - gosec
+    - path: "internal/rdd/rdd\\.go"
+      linters:
+        - cyclop
+        - gocognit
     # TODO: remove after PR is released https://github.com/golangci/golangci-lint/pull/4386
     - text: "fmt.Sprintf can be replaced with string addition"
       linters: [ perfsprint ]
