@@ -46,7 +46,12 @@ func (r *Reader) ReadCSV(fileName string) (*dataframe.DataFrame, error) {
 		data[i] = col.Data
 	}
 
-	return dataframe.New(data, columnNames), nil
+	df, err := dataframe.New(data, columnNames)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create dataframe: %w", err)
+	}
+
+	return df, nil
 }
 
 func createColumns(columnNames []string, records [][]string) ([]dataframe.Series[interface{}], error) {
