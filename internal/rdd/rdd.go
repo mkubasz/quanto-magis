@@ -1,154 +1,404 @@
+// Package rdd provides a Resilient Distributed Dataset (RDD) implementation
+// for distributed data processing with parallel transformations.
 package rdd
 
 import (
+	"context"
+	"fmt"
 	"reflect"
 	"runtime"
-	"sync"
 )
 
+// RDD represents a Resilient Distributed Dataset, an immutable distributed
+// collection of objects that can be processed in parallel.
+// RDD uses Go generics for type safety.
 type RDD[T any] struct {
 	data []T
 	size int
 }
 
+// New creates a new RDD from the provided data slice.
+// The data is copied to ensure immutability.
 func New[T any](data []T) *RDD[T] {
+	// Create a copy to ensure immutability
+	dataCopy := make([]T, len(data))
+	copy(dataCopy, data)
+
 	return &RDD[T]{
-		data: data,
-		size: len(data),
+		data: dataCopy,
+		size: len(dataCopy),
 	}
 }
 
-func (r *RDD[T]) AsyncTransform(fn func([]T, []T) []T) []T {
-	var wg sync.WaitGroup
-	numGoroutines := runtime.NumCPU()
-	chunkSize := r.size / numGoroutines
-	processedData := make([]T, 0, r.size)
-	lock := sync.Mutex{}
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			start := i * chunkSize
-			end := start + chunkSize
-			if i == numGoroutines-1 {
-				end = r.size
-			}
-			newData := r.data[start:end]
-			lock.Lock()
-			processedData = fn(processedData, newData)
-			lock.Unlock()
-		}(i)
-	}
-	wg.Wait()
-	return processedData
-}
-
-func (r *RDD[T]) Map(f func(T) T) *RDD[T] {
-	mappedData := r.AsyncTransform(func(data []T, newData []T) []T {
-		for _, d := range newData {
-			data = append(data, f(d))
-		}
-		return data
-	})
-	return New(mappedData)
-}
-
-func (r *RDD[T]) Filter(f func(T) bool) *RDD[T] {
-	filteredData := r.AsyncTransform(func(data []T, newData []T) []T {
-		for _, d := range newData {
-			if f(d) {
-				data = append(data, d)
-			}
-		}
-		return data
-	})
-	return New(filteredData)
-}
-
-func (r *RDD[T]) FlatArray() *RDD[T] {
-	var wg sync.WaitGroup
-	numWorkers := runtime.NumCPU()
-	resultChan := make(chan T)
-
-	// Fan-out
-	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
-		go func(startIndex, endIndex int) {
-			defer wg.Done()
-			for _, d := range r.data[startIndex:endIndex] {
-				if t := reflect.TypeOf(d); t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-					v := reflect.ValueOf(d)
-					for _, inside := range v.Interface().([]T) {
-						resultChan <- inside
-					}
-				} else {
-					resultChan <- d
-				}
-			}
-		}(i*len(r.data)/numWorkers, (i+1)*len(r.data)/numWorkers)
-	}
-
-	// Fan-in
-	go func() {
-		wg.Wait()
-		close(resultChan)
-	}()
-
-	var flattenData []T
-	for result := range resultChan {
-		flattenData = append(flattenData, result)
-	}
-
-	return New(flattenData)
-}
-
+// Collect returns all elements in the RDD as a slice.
+// This is a terminal operation that returns a copy of the data.
 func (r *RDD[T]) Collect() []T {
-	return r.data
+	result := make([]T, r.size)
+	copy(result, r.data)
+	return result
 }
 
-func (r *RDD[T]) FlatMap(f func(T) T) *RDD[T] {
-	numWorkers := runtime.NumCPU()
-	jobs := make(chan T, len(r.data))
-	results := make(chan []T, numWorkers)
+// Size returns the number of elements in the RDD.
+func (r *RDD[T]) Size() int {
+	return r.size
+}
 
-	// Start worker goroutines
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
+// Map applies the given function to each element in the RDD and returns
+// a new RDD containing the transformed elements.
+// Processing is done in parallel using worker goroutines.
+//
+// The context can be used to cancel the operation.
+// Returns context.Canceled if the context is canceled during processing.
+func (r *RDD[T]) Map(ctx context.Context, fn func(T) T) (*RDD[T], error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if r.size == 0 {
+		return New([]T{}), nil
+	}
+
+	numWorkers := runtime.NumCPU()
+	chunkSize := r.size / numWorkers
+	if chunkSize == 0 {
+		chunkSize = 1
+		numWorkers = r.size
+	}
+
+	// Create channels for work distribution
+	type job struct {
+		index int
+		value T
+	}
+	type result struct {
+		index int
+		value T
+	}
+
+	jobs := make(chan job, r.size)
+	results := make(chan result, r.size)
+	errors := make(chan error, numWorkers)
+
+	// Start workers
 	for i := 0; i < numWorkers; i++ {
 		go func() {
-			defer wg.Done()
-			var flattenData []T
-			for d := range jobs {
-				t := reflect.TypeOf(d)
-				if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
-					v := reflect.ValueOf(d)
-					insideSlice := v.Interface().([]T)
-					for _, inside := range insideSlice {
-						flattenData = append(flattenData, f(inside))
+			for {
+				select {
+				case <-ctx.Done():
+					errors <- ctx.Err()
+					return
+				case j, ok := <-jobs:
+					if !ok {
+						return
 					}
-				} else {
-					flattenData = append(flattenData, f(d))
+					// Apply transformation
+					transformed := fn(j.value)
+					select {
+					case results <- result{index: j.index, value: transformed}:
+					case <-ctx.Done():
+						errors <- ctx.Err()
+						return
+					}
 				}
 			}
-			results <- flattenData
 		}()
 	}
 
+	// Send jobs
 	go func() {
-		for _, d := range r.data {
-			jobs <- d
+		for i, val := range r.data {
+			select {
+			case jobs <- job{index: i, value: val}:
+			case <-ctx.Done():
+				close(jobs)
+				return
+			}
 		}
 		close(jobs)
 	}()
 
-	var flattenData []T
-	go func() {
-		for result := range results {
-			flattenData = append(flattenData, result...)
+	// Collect results
+	mappedData := make([]T, r.size)
+	for i := 0; i < r.size; i++ {
+		select {
+		case res := <-results:
+			mappedData[res.index] = res.value
+		case err := <-errors:
+			return nil, err
+		case <-ctx.Done():
+			return nil, ctx.Err()
 		}
-		close(results)
+	}
+
+	return New(mappedData), nil
+}
+
+// Filter returns a new RDD containing only elements that satisfy the predicate.
+// Processing is done in parallel using worker goroutines.
+//
+// The context can be used to cancel the operation.
+// Returns context.Canceled if the context is canceled during processing.
+func (r *RDD[T]) Filter(ctx context.Context, predicate func(T) bool) (*RDD[T], error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if r.size == 0 {
+		return New([]T{}), nil
+	}
+
+	numWorkers := runtime.NumCPU()
+
+	// Create channels for work distribution
+	type job struct {
+		value T
+	}
+
+	jobs := make(chan job, r.size)
+	results := make(chan []T, numWorkers)
+	errors := make(chan error, numWorkers)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			var filtered []T
+			for {
+				select {
+				case <-ctx.Done():
+					errors <- ctx.Err()
+					return
+				case j, ok := <-jobs:
+					if !ok {
+						// Send local results to results channel
+						results <- filtered
+						return
+					}
+					// Apply predicate
+					if predicate(j.value) {
+						filtered = append(filtered, j.value)
+					}
+				}
+			}
+		}()
+	}
+
+	// Send jobs
+	go func() {
+		for _, val := range r.data {
+			select {
+			case jobs <- job{value: val}:
+			case <-ctx.Done():
+				close(jobs)
+				return
+			}
+		}
+		close(jobs)
 	}()
 
-	wg.Wait()
-	return New(flattenData)
+	// Collect results from all workers
+	var filteredData []T
+	workersDone := 0
+	for workersDone < numWorkers {
+		select {
+		case workerResults := <-results:
+			filteredData = append(filteredData, workerResults...)
+			workersDone++
+		case err := <-errors:
+			return nil, err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	return New(filteredData), nil
+}
+
+// FlatArray flattens nested arrays/slices into a single-level RDD.
+// For elements that are arrays or slices, it extracts all inner elements.
+// For non-array elements, it includes them as-is.
+//
+// The context can be used to cancel the operation.
+// Returns context.Canceled if the context is canceled during processing.
+func (r *RDD[T]) FlatArray(ctx context.Context) (*RDD[T], error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if r.size == 0 {
+		return New([]T{}), nil
+	}
+
+	numWorkers := runtime.NumCPU()
+	chunkSize := r.size / numWorkers
+	if chunkSize == 0 {
+		chunkSize = 1
+		numWorkers = r.size
+	}
+
+	results := make(chan []T, numWorkers)
+	errors := make(chan error, numWorkers)
+
+	// Start workers to process chunks
+	for i := 0; i < numWorkers; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
+		if i == numWorkers-1 {
+			end = r.size
+		}
+
+		go func(start, end int) {
+			var flattened []T
+
+			for _, element := range r.data[start:end] {
+				// Check context periodically
+				select {
+				case <-ctx.Done():
+					errors <- ctx.Err()
+					return
+				default:
+				}
+
+				// Check if element is a slice or array using reflection
+				t := reflect.TypeOf(element)
+				if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+					v := reflect.ValueOf(element)
+					// Extract all elements from the nested structure
+					if innerSlice, ok := v.Interface().([]T); ok {
+						flattened = append(flattened, innerSlice...)
+					} else {
+						// Fallback for type-incompatible slices
+						flattened = append(flattened, element)
+					}
+				} else {
+					flattened = append(flattened, element)
+				}
+			}
+
+			results <- flattened
+		}(start, end)
+	}
+
+	// Collect results from all workers
+	var flattenedData []T
+	workersDone := 0
+	for workersDone < numWorkers {
+		select {
+		case workerResults := <-results:
+			flattenedData = append(flattenedData, workerResults...)
+			workersDone++
+		case err := <-errors:
+			return nil, err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	return New(flattenedData), nil
+}
+
+// FlatMap flattens nested arrays and applies a transformation function to each element.
+// It combines FlatArray and Map operations in a single pass for efficiency.
+//
+// The context can be used to cancel the operation.
+// Returns context.Canceled if the context is canceled during processing.
+func (r *RDD[T]) FlatMap(ctx context.Context, fn func(T) T) (*RDD[T], error) {
+	// Check context before starting
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if r.size == 0 {
+		return New([]T{}), nil
+	}
+
+	numWorkers := runtime.NumCPU()
+
+	// Create channels for work distribution
+	type job struct {
+		value T
+	}
+
+	jobs := make(chan job, r.size)
+	results := make(chan []T, numWorkers)
+	errors := make(chan error, numWorkers)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			var processed []T
+
+			for {
+				select {
+				case <-ctx.Done():
+					errors <- ctx.Err()
+					return
+				case j, ok := <-jobs:
+					if !ok {
+						// Send local results
+						results <- processed
+						return
+					}
+
+					// Check if element is a slice or array
+					t := reflect.TypeOf(j.value)
+					if t.Kind() == reflect.Slice || t.Kind() == reflect.Array {
+						v := reflect.ValueOf(j.value)
+						if innerSlice, ok := v.Interface().([]T); ok {
+							// Process each element in the nested slice
+							for _, inner := range innerSlice {
+								transformed := fn(inner)
+								processed = append(processed, transformed)
+							}
+						} else {
+							// Fallback: treat as single element
+							transformed := fn(j.value)
+							processed = append(processed, transformed)
+						}
+					} else {
+						// Process single element
+						transformed := fn(j.value)
+						processed = append(processed, transformed)
+					}
+				}
+			}
+		}()
+	}
+
+	// Send jobs
+	go func() {
+		for _, val := range r.data {
+			select {
+			case jobs <- job{value: val}:
+			case <-ctx.Done():
+				close(jobs)
+				return
+			}
+		}
+		close(jobs)
+	}()
+
+	// Collect results from all workers
+	var flatMappedData []T
+	workersDone := 0
+	for workersDone < numWorkers {
+		select {
+		case workerResults := <-results:
+			flatMappedData = append(flatMappedData, workerResults...)
+			workersDone++
+		case err := <-errors:
+			return nil, err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+
+	return New(flatMappedData), nil
+}
+
+// String returns a string representation of the RDD.
+func (r *RDD[T]) String() string {
+	return fmt.Sprintf("RDD[size=%d]", r.size)
 }
