@@ -156,7 +156,7 @@ func (df *DataFrame) NumColumns() int {
 // The key parameter is ignored and kept for backward compatibility.
 //
 // Returns ErrEmptyDataFrame if the series is empty.
-func (s Series[T]) Distinct(ctx context.Context, key string) (Series[interface{}], error) {
+func (s Series[T]) Distinct(ctx context.Context, _ string) (Series[interface{}], error) {
 	if err := ctx.Err(); err != nil {
 		return Series[interface{}]{}, err
 	}

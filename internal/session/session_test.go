@@ -1,11 +1,13 @@
-package session
+package session_test
 
 import (
 	"testing"
+
+	"mkubasz/quanto/internal/session"
 )
 
 func TestQuantoSessionBasicSettings(t *testing.T) {
-	sess := New().
+	sess := session.New().
 		SetAppName("Quanto Session").
 		SetMode("local").
 		GetOrCreate()
@@ -13,7 +15,7 @@ func TestQuantoSessionBasicSettings(t *testing.T) {
 	if sess.AppName != "Quanto Session" {
 		t.Errorf("AppName is not 'Quanto Session'")
 	}
-	if sess.Mode != Local {
+	if sess.Mode != session.Local {
 		t.Errorf("Mode is not 'local'")
 	}
 }

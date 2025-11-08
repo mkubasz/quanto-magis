@@ -1,12 +1,15 @@
-package rdd
+package rdd_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+
+	"mkubasz/quanto/internal/rdd"
 )
 
-// TestNew verifies RDD creation from various data types
+// TestNew verifies RDD creation from various data types.
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -37,14 +40,14 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rdd := New(tt.input)
+			r := rdd.New(tt.input)
 
-			if rdd == nil {
+			if r == nil {
 				t.Error("expected non-nil RDD")
 				return
 			}
 
-			got := len(rdd.Collect())
+			got := len(r.Collect())
 			if got != tt.wantSize {
 				t.Errorf("size = %d, want %d", got, tt.wantSize)
 			}
@@ -52,7 +55,9 @@ func TestNew(t *testing.T) {
 	}
 }
 
-// TestMap verifies the Map transformation
+// TestMap verifies the Map transformation.
+//
+//nolint:funlen // Test functions require comprehensive test cases.
 func TestMap(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -97,8 +102,8 @@ func TestMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			rdd := New(tt.input)
-			result, err := rdd.Map(ctx, tt.mapper)
+			r := rdd.New(tt.input)
+			result, err := r.Map(ctx, tt.mapper)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -120,7 +125,9 @@ func TestMap(t *testing.T) {
 	}
 }
 
-// TestFilter verifies the Filter transformation
+// TestFilter verifies the Filter transformation.
+//
+//nolint:funlen // Test functions require comprehensive test cases.
 func TestFilter(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -147,7 +154,7 @@ func TestFilter(t *testing.T) {
 		{
 			name:  "filter none - all pass",
 			input: []interface{}{1, 2, 3},
-			predicate: func(n interface{}) bool {
+			predicate: func(_ interface{}) bool {
 				return true
 			},
 			expected: []interface{}{1, 2, 3},
@@ -155,7 +162,7 @@ func TestFilter(t *testing.T) {
 		{
 			name:  "filter all - none pass",
 			input: []interface{}{1, 2, 3},
-			predicate: func(n interface{}) bool {
+			predicate: func(_ interface{}) bool {
 				return false
 			},
 			expected: []interface{}{},
@@ -165,8 +172,8 @@ func TestFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			rdd := New(tt.input)
-			result, err := rdd.Filter(ctx, tt.predicate)
+			r := rdd.New(tt.input)
+			result, err := r.Filter(ctx, tt.predicate)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -180,7 +187,7 @@ func TestFilter(t *testing.T) {
 			}
 
 			// Filter may not preserve order in parallel execution,
-			// so check that all expected elements are present
+			// so check that all expected elements are present.
 			for _, expected := range tt.expected {
 				found := false
 				for _, actual := range got {
@@ -197,7 +204,7 @@ func TestFilter(t *testing.T) {
 	}
 }
 
-// TestFlatArray verifies flattening of nested arrays
+// TestFlatArray verifies flattening of nested arrays.
 func TestFlatArray(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -238,8 +245,8 @@ func TestFlatArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			rdd := New(tt.input)
-			result, err := rdd.FlatArray(ctx)
+			r := rdd.New(tt.input)
+			result, err := r.FlatArray(ctx)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -254,7 +261,7 @@ func TestFlatArray(t *testing.T) {
 	}
 }
 
-// TestFlatMap verifies the FlatMap transformation
+// TestFlatMap verifies the FlatMap transformation.
 func TestFlatMap(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -283,8 +290,8 @@ func TestFlatMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			rdd := New(tt.input)
-			result, err := rdd.FlatMap(ctx, tt.mapper)
+			r := rdd.New(tt.input)
+			result, err := r.FlatMap(ctx, tt.mapper)
 
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
@@ -298,7 +305,7 @@ func TestFlatMap(t *testing.T) {
 			}
 
 			// FlatMap may not preserve order in parallel execution,
-			// so check that all expected elements are present
+			// so check that all expected elements are present.
 			for _, expected := range tt.expected {
 				found := false
 				for _, actual := range got {
@@ -315,66 +322,66 @@ func TestFlatMap(t *testing.T) {
 	}
 }
 
-// TestMapCancellation verifies that Map respects context cancellation
+// TestMapCancellation verifies that Map respects context cancellation.
 func TestMapCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel() // Cancel immediately.
 
-	// Create large dataset to ensure cancellation is detected
+	// Create large dataset to ensure cancellation is detected.
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i
 	}
 
-	rdd := New(data)
-	_, err := rdd.Map(ctx, func(n interface{}) interface{} {
+	r := rdd.New(data)
+	_, err := r.Map(ctx, func(n interface{}) interface{} {
 		return n.(int) * 2
 	})
 
 	if err == nil {
 		t.Error("expected error due to context cancellation")
 	}
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got: %v", err)
 	}
 }
 
-// TestFilterCancellation verifies that Filter respects context cancellation
+// TestFilterCancellation verifies that Filter respects context cancellation.
 func TestFilterCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel() // Cancel immediately.
 
-	// Create large dataset
+	// Create large dataset.
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i
 	}
 
-	rdd := New(data)
-	_, err := rdd.Filter(ctx, func(n interface{}) bool {
+	r := rdd.New(data)
+	_, err := r.Filter(ctx, func(n interface{}) bool {
 		return n.(int)%2 == 0
 	})
 
 	if err == nil {
 		t.Error("expected error due to context cancellation")
 	}
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got: %v", err)
 	}
 }
 
-// TestConcurrentOperations verifies race-free concurrent operations
+// TestConcurrentOperations verifies race-free concurrent operations.
 func TestConcurrentOperations(t *testing.T) {
-	// Run with: go test -race
+	// Run with: go test -race.
 	data := []interface{}{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	rdd := New(data)
+	r := rdd.New(data)
 	ctx := context.Background()
 
-	// Run multiple operations concurrently
+	// Run multiple operations concurrently.
 	done := make(chan bool, 3)
 
 	go func() {
-		_, err := rdd.Map(ctx, func(n interface{}) interface{} {
+		_, err := r.Map(ctx, func(n interface{}) interface{} {
 			return n.(int) * 2
 		})
 		if err != nil {
@@ -384,7 +391,7 @@ func TestConcurrentOperations(t *testing.T) {
 	}()
 
 	go func() {
-		_, err := rdd.Filter(ctx, func(n interface{}) bool {
+		_, err := r.Filter(ctx, func(n interface{}) bool {
 			return n.(int)%2 == 0
 		})
 		if err != nil {
@@ -394,89 +401,89 @@ func TestConcurrentOperations(t *testing.T) {
 	}()
 
 	go func() {
-		_, err := rdd.FlatArray(ctx)
+		_, err := r.FlatArray(ctx)
 		if err != nil {
 			t.Errorf("FlatArray error: %v", err)
 		}
 		done <- true
 	}()
 
-	// Wait for all operations
+	// Wait for all operations.
 	for i := 0; i < 3; i++ {
 		<-done
 	}
 }
 
-// BenchmarkMap benchmarks the Map operation
+// BenchmarkMap benchmarks the Map operation.
 func BenchmarkMap(b *testing.B) {
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i
 	}
-	rdd := New(data)
+	r := rdd.New(data)
 	ctx := context.Background()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = rdd.Map(ctx, func(n interface{}) interface{} {
+		_, _ = r.Map(ctx, func(n interface{}) interface{} {
 			return n.(int) * 2
 		})
 	}
 }
 
-// BenchmarkFilter benchmarks the Filter operation
+// BenchmarkFilter benchmarks the Filter operation.
 func BenchmarkFilter(b *testing.B) {
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i
 	}
-	rdd := New(data)
+	r := rdd.New(data)
 	ctx := context.Background()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = rdd.Filter(ctx, func(n interface{}) bool {
+		_, _ = r.Filter(ctx, func(n interface{}) bool {
 			return n.(int)%2 == 0
 		})
 	}
 }
 
-// BenchmarkFlatMap benchmarks the FlatMap operation
+// BenchmarkFlatMap benchmarks the FlatMap operation.
 func BenchmarkFlatMap(b *testing.B) {
 	data := make([]interface{}, 100)
 	for i := range data {
 		data[i] = []interface{}{i, i + 1, i + 2}
 	}
-	rdd := New(data)
+	r := rdd.New(data)
 	ctx := context.Background()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = rdd.FlatMap(ctx, func(n interface{}) interface{} {
+		_, _ = r.FlatMap(ctx, func(n interface{}) interface{} {
 			return n.(int) * 2
 		})
 	}
 }
 
-// BenchmarkMapParallel benchmarks Map with parallel execution
+// BenchmarkMapParallel benchmarks Map with parallel execution.
 func BenchmarkMapParallel(b *testing.B) {
 	data := make([]interface{}, 10000)
 	for i := range data {
 		data[i] = i
 	}
-	rdd := New(data)
+	r := rdd.New(data)
 	ctx := context.Background()
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_, _ = rdd.Map(ctx, func(n interface{}) interface{} {
+			_, _ = r.Map(ctx, func(n interface{}) interface{} {
 				return n.(int) * 2
 			})
 		}

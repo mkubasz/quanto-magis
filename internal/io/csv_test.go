@@ -1,11 +1,13 @@
-package io
+package io_test
 
 import (
 	"testing"
+
+	"mkubasz/quanto/internal/io"
 )
 
 func TestShouldReadCSVFile(t *testing.T) {
-	reader := NewReader()
+	reader := io.NewReader()
 	df, err := reader.ReadCSV("../../testdata/test.csv")
 	if err != nil {
 		t.Errorf("failed to read csv file: %v", err)

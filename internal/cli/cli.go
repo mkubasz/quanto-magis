@@ -1,7 +1,7 @@
+// Package cli provides command-line interface functionality for Quanto.
 package cli
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -10,16 +10,19 @@ import (
 	"mkubasz/quanto/internal/session"
 )
 
+// QuantoCLI represents the command-line interface for Quanto applications.
 type QuantoCLI struct {
 	Session *session.QuantoSession
 }
 
+// New creates a new QuantoCLI instance with an initialized session.
 func New() *QuantoCLI {
 	return &QuantoCLI{
 		Session: session.New(),
 	}
 }
 
+// Run starts the CLI application and processes command-line arguments.
 func (q *QuantoCLI) Run() error {
 	app := &cli.App{
 		Name:  "Quanto",
@@ -37,7 +40,7 @@ func (q *QuantoCLI) Run() error {
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			fmt.Println("Quanto is running")
+			log.Println("Quanto is running")
 			q.Session.AppName = ctx.String("name")
 			switch ctx.String("mode") {
 			case "local":

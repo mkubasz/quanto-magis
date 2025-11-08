@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-// DataFrameGroupBy represents a grouped DataFrame for aggregation operations.
-type DataFrameGroupBy struct {
+// GroupBy represents a grouped DataFrame for aggregation operations.
+type GroupBy struct {
 	df         *DataFrame
 	columnName string
 	aggs       []func([]interface{}) int
@@ -18,7 +18,7 @@ type DataFrameGroupBy struct {
 //
 // Returns ErrColumnNotFound if the column doesn't exist.
 // Returns ErrInvalidColumnName if the column name is empty.
-func (df *DataFrame) GroupBy(ctx context.Context, name string) (*DataFrameGroupBy, error) {
+func (df *DataFrame) GroupBy(ctx context.Context, name string) (*GroupBy, error) {
 	// Check context
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (df *DataFrame) GroupBy(ctx context.Context, name string) (*DataFrameGroupB
 		groups[el] = append(groups[el], el)
 	}
 
-	return &DataFrameGroupBy{
+	return &GroupBy{
 		df:         df,
 		columnName: name,
 		groups:     groups,
@@ -56,7 +56,7 @@ func (df *DataFrame) GroupBy(ctx context.Context, name string) (*DataFrameGroupB
 // Agg adds an aggregation function to be applied to each group.
 // The function takes a slice of values and returns an integer result.
 // Multiple aggregation functions can be chained.
-func (dfg *DataFrameGroupBy) Agg(f func([]interface{}) int) *DataFrameGroupBy {
+func (dfg *GroupBy) Agg(f func([]interface{}) int) *GroupBy {
 	dfg.aggs = append(dfg.aggs, f)
 	return dfg
 }
@@ -65,7 +65,7 @@ func (dfg *DataFrameGroupBy) Agg(f func([]interface{}) int) *DataFrameGroupBy {
 // Returns a new DataFrame with columns for the grouping key and aggregation results.
 //
 // Returns ErrInvalidData if Show is called before any aggregations are added.
-func (dfg *DataFrameGroupBy) Show(ctx context.Context) (*DataFrame, error) {
+func (dfg *GroupBy) Show(ctx context.Context) (*DataFrame, error) {
 	// Check context
 	if err := ctx.Err(); err != nil {
 		return nil, err

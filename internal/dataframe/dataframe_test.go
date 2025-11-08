@@ -1,14 +1,15 @@
-package dataframe
+package dataframe_test
 
 import (
 	"context"
 	"errors"
 	"testing"
 
+	"mkubasz/quanto/internal/dataframe"
 	"mkubasz/quanto/internal/rdd"
 )
 
-// TestNewFromRDD verifies DataFrame creation from RDD
+// TestNewFromRDD verifies DataFrame creation from RDD.
 func TestNewFromRDD(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -39,7 +40,7 @@ func TestNewFromRDD(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := rdd.New(tt.input)
-			df := NewFromRDD(r)
+			df := dataframe.NewFromRDD(r)
 
 			if df == nil {
 				t.Error("expected non-nil DataFrame")
@@ -57,7 +58,9 @@ func TestNewFromRDD(t *testing.T) {
 	}
 }
 
-// TestNew verifies DataFrame creation with validation
+// TestNew verifies DataFrame creation with validation.
+//
+//nolint:funlen // Test functions require comprehensive test cases.
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -89,7 +92,7 @@ func TestNew(t *testing.T) {
 				[]interface{}{1, 2, 3},
 			},
 			columns: []string{},
-			wantErr: ErrInvalidColumnName,
+			wantErr: dataframe.ErrInvalidColumnName,
 		},
 		{
 			name: "column count mismatch",
@@ -98,7 +101,7 @@ func TestNew(t *testing.T) {
 				[]interface{}{4, 5, 6},
 			},
 			columns: []string{"col1"},
-			wantErr: ErrInvalidData,
+			wantErr: dataframe.ErrInvalidData,
 		},
 		{
 			name: "empty column name",
@@ -106,7 +109,7 @@ func TestNew(t *testing.T) {
 				[]interface{}{1, 2, 3},
 			},
 			columns: []string{""},
-			wantErr: ErrInvalidColumnName,
+			wantErr: dataframe.ErrInvalidColumnName,
 		},
 		{
 			name: "whitespace column name",
@@ -114,13 +117,13 @@ func TestNew(t *testing.T) {
 				[]interface{}{1, 2, 3},
 			},
 			columns: []string{"  "},
-			wantErr: ErrInvalidColumnName,
+			wantErr: dataframe.ErrInvalidColumnName,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			df, err := New(tt.data, tt.columns)
+			df, err := dataframe.New(tt.data, tt.columns)
 
 			if tt.wantErr != nil {
 				if err == nil {
@@ -145,19 +148,21 @@ func TestNew(t *testing.T) {
 	}
 }
 
-// TestSelect verifies column selection
+// TestSelect verifies column selection.
+//
+//nolint:funlen // Test functions require comprehensive test cases.
 func TestSelect(t *testing.T) {
 	tests := []struct {
 		name       string
-		setup      func() *DataFrame
+		setup      func() *dataframe.DataFrame
 		columnName string
 		wantErr    error
 		wantCount  int
 	}{
 		{
 			name: "select existing column",
-			setup: func() *DataFrame {
-				df, _ := New(
+			setup: func() *dataframe.DataFrame {
+				df, _ := dataframe.New(
 					[]interface{}{
 						[]interface{}{"A", "B", "C"},
 						[]interface{}{1, 2, 3},
@@ -172,8 +177,8 @@ func TestSelect(t *testing.T) {
 		},
 		{
 			name: "select non-existing column",
-			setup: func() *DataFrame {
-				df, _ := New(
+			setup: func() *dataframe.DataFrame {
+				df, _ := dataframe.New(
 					[]interface{}{
 						[]interface{}{"A", "B", "C"},
 					},
@@ -182,12 +187,12 @@ func TestSelect(t *testing.T) {
 				return df
 			},
 			columnName: "col2",
-			wantErr:    ErrColumnNotFound,
+			wantErr:    dataframe.ErrColumnNotFound,
 		},
 		{
 			name: "select with empty name",
-			setup: func() *DataFrame {
-				df, _ := New(
+			setup: func() *dataframe.DataFrame {
+				df, _ := dataframe.New(
 					[]interface{}{
 						[]interface{}{1, 2, 3},
 					},
@@ -196,7 +201,7 @@ func TestSelect(t *testing.T) {
 				return df
 			},
 			columnName: "",
-			wantErr:    ErrInvalidColumnName,
+			wantErr:    dataframe.ErrInvalidColumnName,
 		},
 	}
 
@@ -228,9 +233,9 @@ func TestSelect(t *testing.T) {
 	}
 }
 
-// TestHasColumn verifies column existence checking
+// TestHasColumn verifies column existence checking.
 func TestHasColumn(t *testing.T) {
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{
 			[]interface{}{"A", "B", "C"},
 			[]interface{}{1, 2, 3},
@@ -259,7 +264,7 @@ func TestHasColumn(t *testing.T) {
 	}
 }
 
-// TestDistinct verifies distinct value extraction
+// TestDistinct verifies distinct value extraction.
 func TestDistinct(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -289,14 +294,14 @@ func TestDistinct(t *testing.T) {
 			name:      "empty series",
 			input:     []interface{}{},
 			wantCount: 0,
-			wantErr:   ErrEmptyDataFrame,
+			wantErr:   dataframe.ErrEmptyDataFrame,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			series := Series[interface{}]{Data: tt.input}
+			series := dataframe.Series[interface{}]{Data: tt.input}
 
 			distinct, err := series.Distinct(ctx, "")
 
@@ -323,31 +328,31 @@ func TestDistinct(t *testing.T) {
 	}
 }
 
-// TestDistinctCancellation verifies context cancellation
+// TestDistinctCancellation verifies context cancellation.
 func TestDistinctCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel() // Cancel immediately.
 
-	// Create large dataset
+	// Create large dataset.
 	data := make([]interface{}, 10000)
 	for i := range data {
-		data[i] = i % 100 // Create some duplicates
+		data[i] = i % 100 // Create some duplicates.
 	}
 
-	series := Series[interface{}]{Data: data}
+	series := dataframe.Series[interface{}]{Data: data}
 	_, err := series.Distinct(ctx, "")
 
 	if err == nil {
 		t.Error("expected error due to context cancellation")
 	}
-	if err != context.Canceled {
+	if !errors.Is(err, context.Canceled) {
 		t.Errorf("expected context.Canceled error, got: %v", err)
 	}
 }
 
-// TestColumns verifies column name retrieval
+// TestColumns verifies column name retrieval.
 func TestColumns(t *testing.T) {
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{
 			[]interface{}{1, 2, 3},
 			[]interface{}{4, 5, 6},
@@ -369,28 +374,28 @@ func TestColumns(t *testing.T) {
 	}
 }
 
-// TestDataFrameImmutability verifies that operations don't modify original data
+// TestDataFrameImmutability verifies that operations don't modify original data.
 func TestDataFrameImmutability(t *testing.T) {
 	original := []interface{}{1, 2, 3}
-	df, _ := New(
+	df, _ := dataframe.New(
 		[]interface{}{original},
 		[]string{"col1"},
 	)
 
-	// Select should return a copy
+	// Select should return a copy.
 	series, _ := df.Select("col1")
 
-	// Modify the returned series
+	// Modify the returned series.
 	series.Data[0] = 999
 
-	// Verify original DataFrame is unchanged
+	// Verify original DataFrame is unchanged.
 	series2, _ := df.Select("col1")
 	if series2.Data[0] == 999 {
 		t.Error("DataFrame was mutated, expected immutability")
 	}
 }
 
-// BenchmarkSelect benchmarks column selection
+// BenchmarkSelect benchmarks column selection.
 func BenchmarkSelect(b *testing.B) {
 	data := make([]interface{}, 10)
 	for i := 0; i < 10; i++ {
@@ -406,7 +411,7 @@ func BenchmarkSelect(b *testing.B) {
 		columns[i] = string(rune('a' + i))
 	}
 
-	df, _ := New(data, columns)
+	df, _ := dataframe.New(data, columns)
 
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -416,7 +421,7 @@ func BenchmarkSelect(b *testing.B) {
 	}
 }
 
-// BenchmarkDistinct benchmarks distinct value extraction
+// BenchmarkDistinct benchmarks distinct value extraction.
 func BenchmarkDistinct(b *testing.B) {
 	ctx := context.Background()
 
@@ -425,7 +430,7 @@ func BenchmarkDistinct(b *testing.B) {
 		data[i] = i % 100 // 100 unique values
 	}
 
-	series := Series[interface{}]{Data: data}
+	series := dataframe.Series[interface{}]{Data: data}
 
 	b.ResetTimer()
 	b.ReportAllocs()
