@@ -21,36 +21,16 @@ func NewReader() *Reader {
 
 // ReadCSV reads a CSV file and returns a DataFrame containing the data.
 // The first row is treated as column headers.
-func (r *Reader) ReadCSV(fileName string) (*dataframe.DataFrame, error) {
+func (r *Reader) ReadCSV(fileName string) (_ *dataframe.DataFrame, err error) {
 	file, err := os.Open(fileName) //nolint:gosec // File path is expected to come from user input.
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-func (r *Reader) ReadCSV(fileName string) (_ *dataframe.DataFrame, err error) {
-	file, err := os.Open(fileName) //nolint:gosec // File path is expected to come from user input.
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil && err == nil {
 			err = fmt.Errorf("failed to close file: %w", closeErr)
 		}
 	}()
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("failed to read CSV records: %w", err)
-	}
-
-	columns, err := createColumns(columnNames, dataRecords)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create columns: %w", err)
-	}
-
-	df, err := dataframe.New(data, columnNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create dataframe: %w", err)
-	}
-
-	return df, nil
-}
 
 	reader := csv.NewReader(file)
 	records, err := reader.ReadAll()
