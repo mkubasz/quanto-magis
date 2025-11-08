@@ -59,8 +59,6 @@ func TestNewFromRDD(t *testing.T) {
 }
 
 // TestNew verifies DataFrame creation with validation.
-//
-//nolint:funlen // Test functions require comprehensive test cases.
 func TestNew(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -149,8 +147,6 @@ func TestNew(t *testing.T) {
 }
 
 // TestSelect verifies column selection.
-//
-//nolint:funlen // Test functions require comprehensive test cases.
 func TestSelect(t *testing.T) {
 	tests := []struct {
 		name       string
