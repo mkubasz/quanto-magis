@@ -22,7 +22,7 @@ func NewReader() *Reader {
 // ReadCSV reads a CSV file and returns a DataFrame containing the data.
 // The first row is treated as column headers.
 func (r *Reader) ReadCSV(fileName string) (_ *dataframe.DataFrame, err error) {
-	file, err := os.Open(fileName)
+	file, err := os.Open(fileName) //nolint:gosec // File path is expected to come from user input.
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
