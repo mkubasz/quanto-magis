@@ -1,6 +1,6 @@
 # This code is licensed under the terms of the MIT license https://opensource.org/license/mit
 # Author https://gist.github.com/maratori/47a4d00457a92aa426dbd48a18776322
-## Golden config for golangci-lint v1.56.2
+## Golden config adapted for golangci-lint v2.6.1 (requires v2.0.0+)
 
 version: 2
 
