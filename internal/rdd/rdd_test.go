@@ -56,8 +56,6 @@ func TestNew(t *testing.T) {
 }
 
 // TestMap verifies the Map transformation.
-//
-//nolint:funlen // Test functions require comprehensive test cases.
 func TestMap(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -69,7 +67,8 @@ func TestMap(t *testing.T) {
 			name:  "lowercase string transformation",
 			input: []interface{}{"A", "B", "C"},
 			mapper: func(s interface{}) interface{} {
-				return strings.ToLower(s.(string))
+				str, _ := s.(string)
+				return strings.ToLower(str)
 			},
 			expected: []interface{}{"a", "b", "c"},
 		},
@@ -77,7 +76,8 @@ func TestMap(t *testing.T) {
 			name:  "double integer transformation",
 			input: []interface{}{1, 2, 3},
 			mapper: func(n interface{}) interface{} {
-				return n.(int) * 2
+				num, _ := n.(int)
+				return num * 2
 			},
 			expected: []interface{}{2, 4, 6},
 		},
@@ -126,8 +126,6 @@ func TestMap(t *testing.T) {
 }
 
 // TestFilter verifies the Filter transformation.
-//
-//nolint:funlen // Test functions require comprehensive test cases.
 func TestFilter(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -139,7 +137,8 @@ func TestFilter(t *testing.T) {
 			name:  "filter out C letter",
 			input: []interface{}{"A", "B", "C", "D", "E"},
 			predicate: func(s interface{}) bool {
-				return s.(string) != "C"
+				str, _ := s.(string)
+				return str != "C"
 			},
 			expected: []interface{}{"A", "B", "D", "E"},
 		},
@@ -147,7 +146,8 @@ func TestFilter(t *testing.T) {
 			name:  "filter even numbers",
 			input: []interface{}{1, 2, 3, 4, 5, 6},
 			predicate: func(n interface{}) bool {
-				return n.(int)%2 == 0
+				num, _ := n.(int)
+				return num%2 == 0
 			},
 			expected: []interface{}{2, 4, 6},
 		},
@@ -273,7 +273,8 @@ func TestFlatMap(t *testing.T) {
 			name:  "flatten and lowercase",
 			input: []interface{}{[]interface{}{"A", "B", "C"}, []interface{}{"D", "E"}},
 			mapper: func(s interface{}) interface{} {
-				return strings.ToLower(s.(string))
+				str, _ := s.(string)
+				return strings.ToLower(str)
 			},
 			expected: []interface{}{"a", "b", "c", "d", "e"},
 		},
@@ -281,7 +282,8 @@ func TestFlatMap(t *testing.T) {
 			name:  "flatten and double",
 			input: []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
 			mapper: func(n interface{}) interface{} {
-				return n.(int) * 2
+				num, _ := n.(int)
+				return num * 2
 			},
 			expected: []interface{}{2, 4, 6, 8},
 		},
@@ -335,7 +337,8 @@ func TestMapCancellation(t *testing.T) {
 
 	r := rdd.New(data)
 	_, err := r.Map(ctx, func(n interface{}) interface{} {
-		return n.(int) * 2
+		num, _ := n.(int)
+		return num * 2
 	})
 
 	if err == nil {
@@ -359,7 +362,8 @@ func TestFilterCancellation(t *testing.T) {
 
 	r := rdd.New(data)
 	_, err := r.Filter(ctx, func(n interface{}) bool {
-		return n.(int)%2 == 0
+		num, _ := n.(int)
+		return num%2 == 0
 	})
 
 	if err == nil {
@@ -382,7 +386,8 @@ func TestConcurrentOperations(t *testing.T) {
 
 	go func() {
 		_, err := r.Map(ctx, func(n interface{}) interface{} {
-			return n.(int) * 2
+			num, _ := n.(int)
+			return num * 2
 		})
 		if err != nil {
 			t.Errorf("Map error: %v", err)
@@ -392,7 +397,8 @@ func TestConcurrentOperations(t *testing.T) {
 
 	go func() {
 		_, err := r.Filter(ctx, func(n interface{}) bool {
-			return n.(int)%2 == 0
+			num, _ := n.(int)
+			return num%2 == 0
 		})
 		if err != nil {
 			t.Errorf("Filter error: %v", err)
@@ -428,7 +434,8 @@ func BenchmarkMap(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, _ = r.Map(ctx, func(n interface{}) interface{} {
-			return n.(int) * 2
+			num, _ := n.(int)
+			return num * 2
 		})
 	}
 }
@@ -447,7 +454,8 @@ func BenchmarkFilter(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, _ = r.Filter(ctx, func(n interface{}) bool {
-			return n.(int)%2 == 0
+			num, _ := n.(int)
+			return num%2 == 0
 		})
 	}
 }
@@ -466,7 +474,8 @@ func BenchmarkFlatMap(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, _ = r.FlatMap(ctx, func(n interface{}) interface{} {
-			return n.(int) * 2
+			num, _ := n.(int)
+			return num * 2
 		})
 	}
 }
@@ -484,7 +493,8 @@ func BenchmarkMapParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_, _ = r.Map(ctx, func(n interface{}) interface{} {
-				return n.(int) * 2
+				num, _ := n.(int)
+				return num * 2
 			})
 		}
 	})

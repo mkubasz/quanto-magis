@@ -9,8 +9,6 @@ import (
 )
 
 // TestGroupBy verifies grouping operations.
-//
-//nolint:funlen // Test functions require comprehensive test cases.
 func TestGroupBy(t *testing.T) {
 	tests := []struct {
 		name       string

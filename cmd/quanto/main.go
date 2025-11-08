@@ -25,7 +25,7 @@ func main() {
 
 	// Initialize and run CLI
 	quantoCli := cli.New()
-	if err := quantoCli.Run(); err != nil {
+	if err = quantoCli.Run(); err != nil {
 		log.Printf("Error running CLI: %v\n", err)
 	}
 	log.Println(quantoCli.Session)
